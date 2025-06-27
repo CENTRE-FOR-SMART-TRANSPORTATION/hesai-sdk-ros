@@ -30,6 +30,7 @@ public:
     void LoadAllImuData();
     bool SkipToTimestamp(double start_time);
     boost::optional<LidarImuData> GetImuPacket();
+    boost::optional<std::vector<LidarImuData*>> GetImuPackets(double start_time, double end_time);
 
     std::condition_variable imu_cv;
 

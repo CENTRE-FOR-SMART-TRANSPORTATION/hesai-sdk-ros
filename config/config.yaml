@@ -5,13 +5,13 @@ lidar:
       ptc_port: 9347                   #PTC port of lidar
       device_ip_address: 192.168.1.201 #host_ip_address
       group_address: 255.255.255.255
-      pcap_path: "/home/krupal/Desktop/data/may16/may_16_1.pcap"      #The path of pcap file
-      correction_file_path: "/home/krupal/Desktop/hesai_github/src/HesaiLidar_ROS_2.0/config/PandarXT-32.csv" #The path of correction file
-      imu_file_path: "/home/krupal/Desktop/data/may16/recording1/microstrain_data_1.csv"
+      pcap_path: "/home/krupal/Desktop/data/R_01/june16_1.pcap"                           #The path of pcap file
+      correction_file_path: "PandarXT-32.csv" #The path of correction file
+      imu_file_path: ""                       # IMU file path
       gps_file_path: ""
-      firetimes_path: "Your firetime file path"         #The path of firetimes file
+      firetimes_path: "Your firetime file path"      #The path of firetimes file
       source_type: 2                                 #The type of data source, 1: real-time lidar connection, 2: pcap, 3: packet rosbag, 4: serial    
-      frame_start_azimuth: 0         #Frame azimuth for Pandar128, range from 1 to 359, set it less than 0 if you do not want to use it
+      frame_start_azimuth: 0           #Frame azimuth for Pandar128, range from 1 to 359, set it less than 0 if you do not want to use it
       standby_mode: -1                 #The standby mode: [-1] is invalit [0] in operation [1] standby
       speed: -1                        #The speed: [-1] invalit, you must make sure your set has been supported by the lidar you are using
       #lidar configuration using serial communication

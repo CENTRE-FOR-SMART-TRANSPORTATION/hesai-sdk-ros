@@ -159,7 +159,10 @@ typedef struct _LidarDecodeConfig {
 } LidarDecodeConfig;
 
 typedef struct _LidarImuData {
-  double timestamp; 
+  double timestamp;
+  double roll;
+  double pitch;
+  double yaw;
   double imu_quat_x;
   double imu_quat_y;
   double imu_quat_z;

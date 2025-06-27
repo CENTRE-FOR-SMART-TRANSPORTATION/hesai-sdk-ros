@@ -55,8 +55,8 @@ private:
   uint32_t device_ip_address_;
   uint16_t device_udp_port_;
   uint16_t device_fault_port_;
-  double lidarStartTime = 0;
-  double lidarEndTime = 0;
+  std::atomic<double> lidarStartTime{0.0};
+  std::atomic<double> lidarEndTime{0.0};
 
 public:
   HesaiLidarSdk() {
@@ -236,11 +236,12 @@ public:
         // uint32_t end =  GetMicroTickCount();
         //log info, display frame message
         if (lidar_ptr_->frame_.points_num > kMinPointsOfOneFrame) {
-          printf("frame:%d   points:%u  packet:%d  time:%lf %lf",lidar_ptr_->frame_.frame_index,  lidar_ptr_->frame_.points_num, packet_index, lidar_ptr_->frame_.points[0].timestamp, lidar_ptr_->frame_.points[lidar_ptr_->frame_.points_num - 1].timestamp) ;
+          // printf("frame:%d   points:%u  packet:%d  time:%lf %lf",lidar_ptr_->frame_.frame_index,  lidar_ptr_->frame_.points_num, packet_index, lidar_ptr_->frame_.points[0].timestamp, lidar_ptr_->frame_.points[lidar_ptr_->frame_.points_num - 1].timestamp) ;
 
           //publish point cloud topic
           if(point_cloud_cb_) {
-            if (lidarStartTime == 0) lidarStartTime = lidar_ptr_->frame_.points[0].timestamp;
+            lidarStartTime.store(lidar_ptr_->frame_.points[0].timestamp);
+            lidarEndTime.store(lidar_ptr_->frame_.points[lidar_ptr_->frame_.points_num - 1].timestamp);
             point_cloud_cb_(lidar_ptr_->frame_);
           }
 
@@ -321,20 +322,54 @@ public:
   {
     LogInfo("--------begin to parse imu package--------");
     imu_ptr_->LoadAllImuData();
-    while (lidarStartTime == 0) continue;
-    bool check = imu_ptr_->SkipToTimestamp(lidarStartTime);
+    double prev_lidarStartTime = 0, prev_lidarEndTime = 0;
+    
+    // bool check = imu_ptr_->SkipToTimestamp(lidarStartTime);
+    
+    // while (is_thread_runing_ && check)
+    // {
+      //   boost::optional<LidarImuData> imu_packet_opt = imu_ptr_->GetImuPacket();
+      
+      //   if (!imu_packet_opt) break;
+      
+      //   const LidarImuData& imu_packet_ = *imu_packet_opt;
+      //   printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", imu_packet_.timestamp, lidarStartTime);
+      //   imu_cb_(imu_packet_);
+      //   std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(0.9));  // Change this to 0.5 for 200HZ imu
+      // }
+      
+    //   while (is_thread_runing_) {
+    //     while (lidarStartTime == prev_lidarStartTime && lidarEndTime == prev_LidarEndTime) continue;
+    //     prev_lidarStartTime = lidarStartTime, prev_LidarEndTime = lidarEndTime;
+    //     boost::optional<std::vector<LidarImuData*>> imu_packets_opt = imu_ptr_->GetImuPackets(lidarStartTime, lidarEndTime);
 
-    while (is_thread_runing_ && check)
-    {
-      boost::optional<LidarImuData> imu_packet_opt = imu_ptr_->GetImuPacket();
+    //     if (!imu_packets_opt) break;
 
-      if (!imu_packet_opt) break;
+    //     for (const LidarImuData* packet : *imu_packets_opt) {
+    //         printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", packet->timestamp, lidarStartTime);
+    //         imu_cb_(*packet);
+    //     }
+    // }
+      while (is_thread_runing_) {
+          double currStart = lidarStartTime.load();
+          double currEnd = lidarEndTime.load();
 
-      const LidarImuData& imu_packet_ = *imu_packet_opt;
-      printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", imu_packet_.timestamp, lidarStartTime);
-      imu_cb_(imu_packet_);
-      std::this_thread::sleep_for(std::chrono::milliseconds(6));    // Change this to 0.5 for 200HZ imu
-    }
+          if (currStart == prev_lidarStartTime && currEnd == prev_lidarEndTime) {
+              continue;
+          }
+
+          prev_lidarStartTime = currStart;
+          prev_lidarEndTime = currEnd;
+
+          boost::optional<std::vector<LidarImuData*>> imu_packets_opt = imu_ptr_->GetImuPackets(currStart, currEnd);
+
+          if (!imu_packets_opt) continue;
+
+          for (const LidarImuData* packet : *imu_packets_opt) {
+              printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", packet->timestamp, currStart);
+              imu_cb_(*packet);
+          }
+      }
   }
 
   // assign callback fuction
