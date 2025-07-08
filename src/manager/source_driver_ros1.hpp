@@ -189,7 +189,7 @@ inline void SourceDriver::Init(const YAML::Node& config)
     driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendImuConfig, this, std::placeholders::_1));
   // }
   //  if (driver_param.input_param.send_gps_ros){
-    gps_pub_ = nh_->advertise<sensor_msgs::Imu>(driver_param.input_param.ros_send_gps_topic, 100);
+    gps_pub_ = nh_->advertise<sensor_msgs::NavSatFix>(driver_param.input_param.ros_send_gps_topic, 100);
     driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendGPSConfig, this, std::placeholders::_1));
   // }
   if(driver_param.input_param.send_packet_ros && driver_param.input_param.source_type != DATA_FROM_ROS_PACKET){
