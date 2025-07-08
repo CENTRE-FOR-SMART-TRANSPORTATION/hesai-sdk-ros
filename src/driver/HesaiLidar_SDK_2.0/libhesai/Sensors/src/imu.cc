@@ -1,7 +1,6 @@
 #include "imu.h"
 #include <tf2/LinearMath/Quaternion.h>
 #include <iostream>
-#include <cmath>
 
 #define EARTH_RADIUS 6371000
 using namespace hesai::lidar;
@@ -18,14 +17,6 @@ double degtorad(double degree) {
     return degree * M_PI / 180.0;
 }
 
-double safeStod(const std::string& str) {
-    try {
-        return std::stod(str); // Try to convert the string to double
-    } catch (const std::invalid_argument& e) {
-        std::cerr << "Error: Invalid value '" << str << "' encountered during conversion." << std::endl;
-        return NAN; // Return NaN to indicate invalid data
-    }
-}
 
 void ImuSDK::LoadAllImuData() {
     std::ifstream file(imu_path);

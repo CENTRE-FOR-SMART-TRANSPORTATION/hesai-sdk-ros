@@ -43,6 +43,7 @@ class HesaiLidarSdk
 private:
   std::thread *runing_thread_ptr_;
   std::thread *imu_thread_ptr_;
+  std::thread *gps_thread_ptr_;
   std::function<void(const UdpFrame_t&, double)> pkt_cb_;
   std::function<void(const LidarDecodedFrame<T_Point>&)> point_cloud_cb_;
   std::function<void(const u8Array_t&)> correction_cb_;
@@ -50,6 +51,7 @@ private:
   std::function<void(const uint8_t&, const u8Array_t&)> ptp_cb_;
   std::function<void(const FaultMessageInfo&)> fault_message_cb_;
   std::function<void(const LidarImuData&)> imu_cb_;
+  std::function<void(const LidarGPSData&)> gps_cb_;
   bool is_thread_runing_;
   bool packet_loss_tool_;
   uint32_t device_ip_address_;
@@ -74,6 +76,7 @@ public:
   }
   Lidar<T_Point> *lidar_ptr_;
   ImuSDK *imu_ptr_;
+  GPSSDK *gps_ptr_;
   DriverParam param_;
   std::thread *init_thread_ptr_;
   SourceType source_type_;
@@ -114,9 +117,13 @@ public:
     else{
       device_udp_port_ = 0;
     }
-    if (param.input_param.send_imu_raw && param.input_param.imu_file_path != ""){
+    if (param.input_param.send_imu_ros && param.input_param.imu_file_path != ""){
       imu_ptr_ = new ImuSDK(param.input_param.imu_file_path);
       printf("IMU Ptr Initialized\n");
+    }
+    if (param.input_param.send_gps_ros && param.input_param.gps_file_path != ""){
+      gps_ptr_ = new GPSSDK(param.input_param.gps_file_path);
+      printf("GPS Ptr Initialized\n");
     }
     /***********************************************************************************/ 
     return true;
@@ -136,6 +143,12 @@ public:
       delete imu_thread_ptr_;
       imu_thread_ptr_ = nullptr;
     }
+    if (nullptr != gps_thread_ptr_) {
+      is_thread_runing_ = false;
+      gps_thread_ptr_->join();
+      delete gps_thread_ptr_;
+      gps_thread_ptr_ = nullptr;
+    }
 
     if (nullptr != lidar_ptr_) {
       delete lidar_ptr_;
@@ -151,6 +164,10 @@ public:
       delete imu_ptr_;
       imu_ptr_ = nullptr;
     }
+    if (nullptr != gps_ptr_){
+      delete gps_ptr_;
+      gps_ptr_ = nullptr;
+    }
   }
 
   void onRelease() { is_thread_runing_ = false; }
@@ -161,6 +178,7 @@ public:
       if ((source_type_ == DATA_FROM_LIDAR && lidar_ptr_->init_finish_[FaultMessParse]) || lidar_ptr_->init_finish_[AllInitFinish]) {
         runing_thread_ptr_ = new std::thread(std::bind(&HesaiLidarSdk::Run, this));
         if (nullptr != imu_ptr_) imu_thread_ptr_ = new std::thread(std::bind(&HesaiLidarSdk::ImuRun, this));
+        if (nullptr != gps_ptr_) gps_thread_ptr_ = new std::thread(std::bind(&HesaiLidarSdk::GPSRun, this));
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -322,54 +340,56 @@ public:
   {
     LogInfo("--------begin to parse imu package--------");
     imu_ptr_->LoadAllImuData();
-    double prev_lidarStartTime = 0, prev_lidarEndTime = 0;
+    double prev_lidarStartTime_imu = 0, prev_lidarEndTime_imu = 0;
     
-    // bool check = imu_ptr_->SkipToTimestamp(lidarStartTime);
+    while (is_thread_runing_) {
+        double currStart = lidarStartTime.load();
+        double currEnd = lidarEndTime.load();
+
+        if (currStart == prev_lidarStartTime_imu && currEnd == prev_lidarEndTime_imu) {
+            continue;
+        }
+
+        prev_lidarStartTime_imu = currStart;
+        prev_lidarEndTime_imu = currEnd;
+
+        boost::optional<std::vector<LidarImuData*>> imu_packets_opt = imu_ptr_->GetImuPackets(currStart, currEnd);
+
+        if (!imu_packets_opt) continue;
+
+        for (const LidarImuData* packet : *imu_packets_opt) {
+            printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", packet->timestamp, currStart);
+            imu_cb_(*packet);
+        }
+    }
+  }
+
+  void GPSRun()
+  {
+    LogInfo("--------begin to parse gps package--------");
+    gps_ptr_->LoadAllGPSData();
+    double prev_lidarStartTime_gps = 0, prev_lidarEndTime_gps = 0;
     
-    // while (is_thread_runing_ && check)
-    // {
-      //   boost::optional<LidarImuData> imu_packet_opt = imu_ptr_->GetImuPacket();
-      
-      //   if (!imu_packet_opt) break;
-      
-      //   const LidarImuData& imu_packet_ = *imu_packet_opt;
-      //   printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", imu_packet_.timestamp, lidarStartTime);
-      //   imu_cb_(imu_packet_);
-      //   std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(0.9));  // Change this to 0.5 for 200HZ imu
-      // }
-      
-    //   while (is_thread_runing_) {
-    //     while (lidarStartTime == prev_lidarStartTime && lidarEndTime == prev_LidarEndTime) continue;
-    //     prev_lidarStartTime = lidarStartTime, prev_LidarEndTime = lidarEndTime;
-    //     boost::optional<std::vector<LidarImuData*>> imu_packets_opt = imu_ptr_->GetImuPackets(lidarStartTime, lidarEndTime);
+    while (is_thread_runing_) {
+        double currStart = lidarStartTime.load();
+        double currEnd = lidarEndTime.load();
 
-    //     if (!imu_packets_opt) break;
+        if (currStart == prev_lidarStartTime_gps && currEnd == prev_lidarEndTime_gps) {
+            continue;
+        }
 
-    //     for (const LidarImuData* packet : *imu_packets_opt) {
-    //         printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", packet->timestamp, lidarStartTime);
-    //         imu_cb_(*packet);
-    //     }
-    // }
-      while (is_thread_runing_) {
-          double currStart = lidarStartTime.load();
-          double currEnd = lidarEndTime.load();
+        prev_lidarStartTime_gps = currStart;
+        prev_lidarEndTime_gps = currEnd;
+        // printf("currStart: %lf, currEnd: %lf\n", currStart, currEnd);
+        boost::optional<std::vector<LidarGPSData*>> gps_packets_opt = gps_ptr_->GetGPSPackets(currStart, currEnd);
 
-          if (currStart == prev_lidarStartTime && currEnd == prev_lidarEndTime) {
-              continue;
-          }
+        if (!gps_packets_opt) continue;
 
-          prev_lidarStartTime = currStart;
-          prev_lidarEndTime = currEnd;
-
-          boost::optional<std::vector<LidarImuData*>> imu_packets_opt = imu_ptr_->GetImuPackets(currStart, currEnd);
-
-          if (!imu_packets_opt) continue;
-
-          for (const LidarImuData* packet : *imu_packets_opt) {
-              printf("IMU Timestamp: %lf, lidar Timestamp: %lf\n", packet->timestamp, currStart);
-              imu_cb_(*packet);
-          }
-      }
+        for (const LidarGPSData* packet : *gps_packets_opt) {
+            printf("GPS Timestamp: %lf, lidar Timestamp: %lf\n", packet->timestamp, currStart);
+            gps_cb_(*packet);
+        }
+    }
   }
 
   // assign callback fuction
@@ -398,6 +418,9 @@ public:
   }
   void RegRecvCallback(const std::function<void (const LidarImuData&)>& callback) {
     imu_cb_ = callback;
+  }
+  void RegRecvCallback(const std::function<void (const LidarGPSData&)>& callback) {
+    gps_cb_ = callback;
   }
 };
 

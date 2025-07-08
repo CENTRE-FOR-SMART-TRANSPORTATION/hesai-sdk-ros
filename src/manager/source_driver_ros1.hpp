@@ -38,6 +38,8 @@
 #include "hesai_ros_driver/Ptp.h"
 #include "hesai_ros_driver/Firetime.h"
 #include <sensor_msgs/Imu.h>
+#include <sensor_msgs/NavSatFix.h>
+#include <sensor_msgs/NavSatStatus.h>
 #include <boost/thread.hpp>
 #include "source_drive_common.hpp"
 #include <tf2/LinearMath/Quaternion.h> 
@@ -82,6 +84,8 @@ protected:
   void SendFiretime(const double *firetime_correction_);
   // Used to publish the imu packet
   void SendImuConfig(const LidarImuData& msg);
+  // Used to publish the gps packet
+  void SendGPSConfig(const LidarGPSData& msg);
   // Convert Linear Acceleration from g to m/s^2
   double From_g_To_ms2(double g);
   // Convert Angular Velocity from degree/s to radian/s
@@ -100,7 +104,9 @@ protected:
   // Convert double[512] to float64[512]
   hesai_ros_driver::Firetime ToRosMsg(const double *firetime_correction_);
   // Convert imu, imu into ROS message
-  sensor_msgs::Imu ToRosMsg(const LidarImuData& firetime_correction_);
+  sensor_msgs::Imu ToRosMsg(const LidarImuData& imu_data_);
+  // Convert gps into ROS msg
+  sensor_msgs::NavSatFix ToRosMsg(const LidarGPSData& gps_data_);
   // publish point
   std::shared_ptr<ros::NodeHandle> nh_;
   ros::Publisher pub_;
@@ -118,6 +124,8 @@ protected:
   ros::Publisher ptp_pub_;
   ros::Subscriber crt_sub_;
   ros::Publisher imu_pub_;
+  ros::Publisher gps_pub_;
+
 };
 
 
@@ -176,8 +184,14 @@ inline void SourceDriver::Init(const YAML::Node& config)
     driver_param.decoder_param.enable_parser_thread = true;
   #endif
   driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendPointCloud, this, std::placeholders::_1));
-  imu_pub_ = nh_->advertise<sensor_msgs::Imu>(driver_param.input_param.ros_send_imu_topic, 100);
-  driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendImuConfig, this, std::placeholders::_1));
+  // if (driver_param.input_param.send_imu_ros){
+    imu_pub_ = nh_->advertise<sensor_msgs::Imu>(driver_param.input_param.ros_send_imu_topic, 100);
+    driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendImuConfig, this, std::placeholders::_1));
+  // }
+  //  if (driver_param.input_param.send_gps_ros){
+    gps_pub_ = nh_->advertise<sensor_msgs::Imu>(driver_param.input_param.ros_send_gps_topic, 100);
+    driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendGPSConfig, this, std::placeholders::_1));
+  // }
   if(driver_param.input_param.send_packet_ros && driver_param.input_param.source_type != DATA_FROM_ROS_PACKET){
     driver_ptr_->RegRecvCallback(std::bind(&SourceDriver::SendPacket, this, std::placeholders::_1, std::placeholders::_2)) ;
   }
@@ -248,6 +262,11 @@ inline void SourceDriver::SendFiretime(const double *firetime_correction_)
 inline void SourceDriver::SendImuConfig(const LidarImuData& msg)
 {
   imu_pub_.publish(ToRosMsg(msg));
+}
+
+inline void SourceDriver::SendGPSConfig(const LidarGPSData& msg)
+{
+  gps_pub_.publish(ToRosMsg(msg));
 }
 
 inline sensor_msgs::PointCloud2 SourceDriver::ToRosMsg(const LidarDecodedFrame<LidarPointXYZIRT>& frame, const std::string& frame_id)
@@ -403,6 +422,49 @@ inline sensor_msgs::Imu SourceDriver::ToRosMsg(const LidarImuData &imu_config_)
   ros_msg.angular_velocity.x = imu_config_.imu_ang_vel_x;
   ros_msg.angular_velocity.y = imu_config_.imu_ang_vel_y;
   ros_msg.angular_velocity.z = imu_config_.imu_ang_vel_z;
+
+  return ros_msg;
+}
+
+inline sensor_msgs::NavSatFix SourceDriver::ToRosMsg(const LidarGPSData &gps_data_)
+{
+  sensor_msgs::NavSatFix ros_msg;
+
+  // Set the header information (optional, but recommended)
+  int64_t sec = static_cast<int64_t>(gps_data_.timestamp);  
+  if (sec <= std::numeric_limits<int32_t>::max()) {
+    ros_msg.header.stamp = ros::Time().fromSec(gps_data_.timestamp);
+  } else {
+    printf("ros1 does not support timestamps greater than 19 January 2038 03:14:07 (now %lf)\n", gps_data_.timestamp);
+  }
+  ros_msg.header.frame_id = frame_id_;
+
+  // Set the latitude, longitude, and altitude
+  ros_msg.latitude = gps_data_.lat;
+  ros_msg.longitude = gps_data_.lon;
+  ros_msg.altitude = gps_data_.alt;
+
+  // Set the status of the GPS fix
+  if (gps_data_.fix == 0) ros_msg.status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
+  else if (gps_data_.fix == 1 or gps_data_.fix == 2) ros_msg.status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
+  else if (gps_data_.fix == 4 or gps_data_.fix == 5) ros_msg.status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
+
+  ros_msg.status.service = sensor_msgs::NavSatStatus::SERVICE_GPS | 
+                           sensor_msgs::NavSatStatus::SERVICE_GLONASS | 
+                           sensor_msgs::NavSatStatus::SERVICE_COMPASS | 
+                           sensor_msgs::NavSatStatus::SERVICE_GALILEO; // Set the service type
+
+  // Set the horizontal dilution of precision (HDOP)
+  if (gps_data_.covariance.size() == 9) {
+    for (size_t i = 0; i < 9; ++i) {
+      ros_msg.position_covariance[i] = gps_data_.covariance[i];
+    }
+    ros_msg.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+  } else {
+      // If covariance is not valid, set to zero
+      std::fill(ros_msg.position_covariance.begin(), ros_msg.position_covariance.end(), 0.0);
+    ros_msg.position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
+  }
 
   return ros_msg;
 }

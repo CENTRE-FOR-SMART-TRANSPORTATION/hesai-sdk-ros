@@ -150,7 +150,8 @@ typedef struct InputParam
 
   bool send_packet_ros;
   bool send_point_cloud_ros;
-  bool send_imu_raw;
+  bool send_imu_ros;
+  bool send_gps_ros;
   std::string frame_id;
 
   std::string ros_send_packet_topic = NULL_TOPIC;

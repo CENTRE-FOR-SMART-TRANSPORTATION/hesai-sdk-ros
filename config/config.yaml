@@ -5,8 +5,8 @@ lidar:
       ptc_port: 9347                   #PTC port of lidar
       device_ip_address: 192.168.1.201 #host_ip_address
       group_address: 255.255.255.255
-      pcap_path: "/home/krupal/Desktop/data/R_01/june16_1.pcap"                           #The path of pcap file
-      correction_file_path: "PandarXT-32.csv" #The path of correction file
+      pcap_path: "                           #The path of pcap file
+      correction_file_path: "" #The path of correction file
       imu_file_path: ""                       # IMU file path
       gps_file_path: ""
       firetimes_path: "Your firetime file path"      #The path of firetimes file
@@ -44,11 +44,12 @@ lidar:
       # ros_send_correction_topic: /lidar_corrections #Topic used to send correction through ROS
       # ros_send_firetime_topic: /lidar_firetime
       ros_send_packet_loss_topic: /lidar_packets_loss
-      ros_send_imu_topic: /lidar_imu                #Topic used to send lidar imu message
+      ros_send_imu_topic: /lidar_imu               #Topic used to send lidar imu message
       ros_send_gps_topic: /lidar_gps
       # Topic used to monitor packets loss condition through ROS
       # ros_send_ptp_topic: /lidar_ptp
       # Topic used to send PTP lock status, offset through ROS
       send_packet_ros: true                         #true: Send packets through ROS 
       send_point_cloud_ros: true                    #true: Send point cloud through ROS    
-      send_imu_raw: true
+      send_imu_ros: false
+      send_gps_ros: true

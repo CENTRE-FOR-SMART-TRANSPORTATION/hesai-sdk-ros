@@ -192,36 +192,36 @@ typedef struct _LidarImuData {
   }
 } LidarImuData;
 
-typedef struct _LidarGpsData {
+typedef struct _LidarGPSData {
   double timestamp; 
-  double imu_quat_x;
-  double imu_quat_y;
-  double imu_quat_z;
-  double imu_quat_w;
-  double imu_accel_x;
-  double imu_accel_y;
-  double imu_accel_z;
-  double imu_ang_vel_x;
-  double imu_ang_vel_y;
-  double imu_ang_vel_z;
+  double lat;
+  double lon;
+  double alt;
+  double fix;
+  double hdop;
+  double sip;
+  double h2acc;
+  double v2acc;
+  double t3acc;
+  std::vector<double> covariance;
   bool flag;
 
-  _LidarGpsData()
+  _LidarGPSData()
   {
     flag = false;
     timestamp = 0;
-    imu_quat_x = -1;
-    imu_quat_y = -1;
-    imu_quat_z = -1;
-    imu_quat_w = -1;
-    imu_accel_x = -1;
-    imu_accel_y = -1;
-    imu_accel_z = -1;
-    imu_ang_vel_x = -1;
-    imu_ang_vel_y = -1;
-    imu_ang_vel_z = -1;
+    lat = -1;
+    lon = -1;
+    alt = -1;
+    hdop = -1;
+    fix = -1;
+    sip = -1;
+    h2acc = -1;
+    v2acc = -1;
+    t3acc = -1;
+    covariance = std::vector<double>(9, 0.0); // Initialize with 9 elements, all set to 0.0
   }
-} LidarGpsData;
+} LidarGPSData;
 
 #define POINT_DATA_OFFSET               (0)
 #define POINT_DATA_LEN                  (sizeof(PointDecodeData) * kMaxPacketNumPerFrame * kMaxPointsNumPerPacket)

@@ -52,7 +52,9 @@ int main(int argc, char *argv[])
   param.input_param.rs232_com = "Your serial port name for sending cmd";
   param.input_param.host_ip_address = "";
   param.input_param.multicast_ip_address = "";
-  param.input_param.send_imu_raw = false;
+  param.input_param.send_imu_ros = false;
+  param.input_param.send_gps_ros = false;
+
 
   param.decoder_param.distance_correction_lidar_flag = false;
   param.decoder_param.socket_buffer_size = 262144000;

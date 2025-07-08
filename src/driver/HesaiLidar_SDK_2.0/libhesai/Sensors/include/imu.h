@@ -5,6 +5,7 @@
 #include "lidar_types.h"
 
 #include <vector>
+#include <cmath>
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -20,6 +21,16 @@ namespace hesai
 {
 namespace lidar
 {
+
+
+inline double safeStod(const std::string& str) {
+    try {
+        return std::stod(str); // Try to convert the string to double
+    } catch (const std::invalid_argument& e) {
+        std::cerr << "Error: Invalid value '" << str << "' encountered during conversion." << std::endl;
+        return NAN; // Return NaN to indicate invalid data
+    }
+}
 
 class ImuSDK
 {
