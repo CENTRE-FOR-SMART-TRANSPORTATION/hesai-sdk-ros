@@ -35,7 +35,7 @@ inline double safeStod(const std::string& str) {
 class ImuSDK
 {
 public:
-    ImuSDK(std::string imu_path);
+    ImuSDK(std::string imu_path, bool roll_correct);
     ~ImuSDK();
 
     void LoadAllImuData();
@@ -49,6 +49,7 @@ private:
     void ReadIMUData();  // Internal function for reading data
     std::string imu_path;
     std::thread imu_thread;
+    bool roll_correct;
     std::atomic<bool> running;
     bool imu_file_has_gps;
     std::vector<LidarImuData> all_imu_data;    // how to define an empty queue

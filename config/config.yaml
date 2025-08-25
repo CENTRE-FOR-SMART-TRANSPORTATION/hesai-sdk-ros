@@ -46,6 +46,7 @@ lidar:
       ros_send_packet_loss_topic: /lidar_packets_loss
       ros_send_imu_topic: /lidar_imu               #Topic used to send lidar imu message
       ros_send_gps_topic: /lidar_gps
+      imu_roll_correct: true                   #true: correct imu roll angle (0); false: not correct imu roll angle (pi)
       # Topic used to monitor packets loss condition through ROS
       # ros_send_ptp_topic: /lidar_ptp
       # Topic used to send PTP lock status, offset through ROS

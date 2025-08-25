@@ -118,7 +118,7 @@ public:
       device_udp_port_ = 0;
     }
     if (param.input_param.send_imu_ros && param.input_param.imu_file_path != ""){
-      imu_ptr_ = new ImuSDK(param.input_param.imu_file_path);
+      imu_ptr_ = new ImuSDK(param.input_param.imu_file_path, param.input_param.imu_roll_correction);
       printf("IMU Ptr Initialized\n");
     }
     if (param.input_param.send_gps_ros && param.input_param.gps_file_path != ""){
