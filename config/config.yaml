@@ -5,10 +5,10 @@ lidar:
       ptc_port: 9347                   #PTC port of lidar
       device_ip_address: 192.168.1.201 #host_ip_address
       group_address: 255.255.255.255
-      pcap_path: "                           #The path of pcap file
-      correction_file_path: "" #The path of correction file
-      imu_file_path: ""                       # IMU file path
-      gps_file_path: ""
+      pcap_path: "/home/cst/Desktop/raw_data/2025-08-14_2.pcap"                        #The path of pcap file
+      correction_file_path: "/home/cst/Desktop/ros_workspace_Hesai/src/hesai-sdk-ros/config/PandarXT-32.csv" #The path of correction file
+      imu_file_path: "/home/cst/Desktop/raw_data/2025-08-14_14-53-49/microstrain_data_1.csv"                       # IMU file path
+      gps_file_path: "/home/cst/Desktop/raw_data/2025-08-14_14-53-49/ublox_data_pro_1.csv"
       firetimes_path: "Your firetime file path"      #The path of firetimes file
       source_type: 2                                 #The type of data source, 1: real-time lidar connection, 2: pcap, 3: packet rosbag, 4: serial    
       frame_start_azimuth: 0           #Frame azimuth for Pandar128, range from 1 to 359, set it less than 0 if you do not want to use it
@@ -36,7 +36,7 @@ lidar:
       device_udp_src_port: 0                # Filter point clouds for specified source ports in case of multiple lidar, setting >=1024
       device_fault_port: 0                  # Filter fault message for specified source ports in case of multiple lidar, setting >=1024
     ros:
-      ros_frame_id: hesai_lidar                     #Frame id of packet message and point cloud message
+      ros_frame_id: base_link                     #Frame id of packet message and point cloud message
       # ros_recv_correction_topic: /lidar_corrections #Topic used to receive corrections file from rosbag
       ros_recv_packet_topic: /lidar_packets         #Topic used to receive lidar packets from rosbag
       ros_send_packet_topic: /lidar_packets         #Topic used to send lidar raw packets through ROS
@@ -46,11 +46,11 @@ lidar:
       ros_send_packet_loss_topic: /lidar_packets_loss
       ros_send_imu_topic: /lidar_imu               #Topic used to send lidar imu message
       ros_send_gps_topic: /lidar_gps
-      imu_roll_correct: true                   #true: correct imu roll angle (0); false: not correct imu roll angle (pi)
+      imu_roll_correct: false                  #true: correct imu roll angle (0); false: not correct imu roll angle (pi)
       # Topic used to monitor packets loss condition through ROS
       # ros_send_ptp_topic: /lidar_ptp
       # Topic used to send PTP lock status, offset through ROS
-      send_packet_ros: true                         #true: Send packets through ROS 
+      send_packet_ros: true                       #true: Send packets through ROS 
       send_point_cloud_ros: true                    #true: Send point cloud through ROS    
-      send_imu_ros: false
+      send_imu_ros: true
       send_gps_ros: true

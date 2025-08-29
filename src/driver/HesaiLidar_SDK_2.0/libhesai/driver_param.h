@@ -152,7 +152,7 @@ typedef struct InputParam
   bool send_point_cloud_ros;
   bool send_imu_ros;
   bool send_gps_ros;
-  bool imu_roll_correction = false;
+  bool imu_roll_correction; //= false;
   std::string frame_id;
 
   std::string ros_send_packet_topic = NULL_TOPIC;
